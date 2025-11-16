@@ -1,0 +1,53 @@
+Deployment YAML Changes:
+Add init container (under spec.template.spec): 
+
+
+
+  initContainers:
+      - name: otel-agent
+        image: registry.gitlab.com/tmobile/apm_team/appdynamics/images/nodejs-agent:latest
+      command: ["cp", "-ra", "/otel/node_modules", "/opt/temp"]
+      volumeMounts:
+       - name: otel-agent
+      mountPath: /opt/temp 
+Add mount path to your application container:
+
+
+
+- name: otel-agent
+  mountPath: /app/opt/otel
+Add Environment Variables (in your application container spec): For full list of Required and Recommended OTEL Resource Attributes, refer here.
+
+
+
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: (See the link above, Connecting to the Collectors, for what values to put here.)
+      - name: OTEL_SERVICE_NAME
+        value: <Name of your microservice, this should match SNOW's CSDM>
+      - name: OTEL_RESOURCE_ATTRIBUTES
+        value: service.namespace=<{{K8S_NS}},service.instance.id=<Pod's instance ID>,deployment.environment=<Environment>,,tmo.cmdb.apm_id=<APMID from CMDB>,tmo.cmdb.app_id=<APPID from CMDB>,tmo.cmdb.du_id=<DUID from CMDB>,tmo.app_name=<Short name for logical grouping of microservices>
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: "http/protobuf"
+      - name: OTEL_TRACES_EXPORTER
+        value: "otlp"
+      - name: OTEL_METRICS_EXPORTER
+        value: "otlp"
+      - name: OTEL_LOGS_EXPORTER
+        value: "none" 
+Add otel-agent empty directory volume:
+
+
+
+      - name: otel-agent
+        emptyDir: {}
+          sizeLimit: '100Mi'
+You’ll need to update your package.json to include the OpenTelemetry agent when starting the application.
+
+Update your start script to:
+
+
+
+"start": "node --require /app/opt/otel/node_modules/@splunk/otel/instrument <your-app.js>"
+Alternatively, in your Dockerfile:
+
+CMD ["node","--require","/app/opt/otel/node_modules/@splunk/otel/instrument", "<your-app.js>"]
