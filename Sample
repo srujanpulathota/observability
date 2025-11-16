@@ -1,11 +1,24 @@
 version: "3.9"
 
 services:
-  # Acts like a Kubernetes initContainer for the OTEL Node.js agent
+  # Init-like service to copy OTEL Node.js agent into a shared volume
   otel-agent-init:
     image: registry.gitlab.com/tmobile/apm_team/appdynamics/images/nodejs-agent:latest
     container_name: otel_agent_init
-    command: ["sh", "-c", "cp -ra /otel/node_modules /app/opt/otel && ls -R /app/opt/otel"]
+    command:
+      [
+        "sh",
+        "-c",
+        "mkdir -p /app/opt/otel && \
+         if [ ! -d /app/opt/otel/node_modules ]; then \
+           echo 'Copying OTEL node_modules to shared volume...'; \
+           cp -R /otel/node_modules /app/opt/otel/; \
+         else \
+           echo 'OTEL node_modules already present, skipping copy'; \
+         fi && \
+         ls -R /app/opt/otel && \
+         echo 'otel-agent-init completed successfully'"
+      ]
     volumes:
       - otel-agent:/app/opt/otel
     restart: "no"
@@ -23,12 +36,12 @@ services:
     env_file:
       - .ignatelite.env
     environment:
-      # Inject OTEL instrumentation into any Node process
+      # Inject OTEL into Node without touching Dockerfile or package.json
       NODE_OPTIONS: "--require /app/opt/otel/node_modules/@splunk/otel/instrument"
 
-      # ---- OTEL CONFIG: fill these with real values ----
+      # ---- OTEL CONFIG: replace placeholders with real values ----
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://<otel-collector-host>:4317"
-      OTEL_SERVICE_NAME: "ignate-lite"  # match SNOW CSDM service name
+      OTEL_SERVICE_NAME: "ignate-lite"  # match SNOW CSDM
       OTEL_RESOURCE_ATTRIBUTES: >
         service.namespace=<K8S_NS>,
         service.instance.id=ignate-lite-main,
@@ -41,11 +54,10 @@ services:
       OTEL_TRACES_EXPORTER: "otlp"
       OTEL_METRICS_EXPORTER: "otlp"
       OTEL_LOGS_EXPORTER: "none"
-      # --------------------------------------------------
+      # ------------------------------------------------------------
     volumes:
       - /dev-dcr-ignate/ignatelitedcr:/usr/src/app/service_logs
       - ./keys:/usr/src/app/keys:ro
-      # OTEL agent node_modules shared from init service
       - otel-agent:/app/opt/otel
     networks:
       - intranet
@@ -60,10 +72,10 @@ services:
     env_file:
       - .ignatelite.env
     environment:
-      # Same OTEL injection, but this time for the worker's Node process
+      # Same OTEL injection, for worker process
       NODE_OPTIONS: "--require /app/opt/otel/node_modules/@splunk/otel/instrument"
 
-      # ---- OTEL CONFIG: you can tweak service name if needed ----
+      # ---- OTEL CONFIG: tweak service name if you want ----
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://<otel-collector-host>:4317"
       OTEL_SERVICE_NAME: "ignate-lite-worker"
       OTEL_RESOURCE_ATTRIBUTES: >
@@ -78,7 +90,7 @@ services:
       OTEL_TRACES_EXPORTER: "otlp"
       OTEL_METRICS_EXPORTER: "otlp"
       OTEL_LOGS_EXPORTER: "none"
-      # -----------------------------------------------------------
+      # ------------------------------------------------------
     volumes:
       - /dev-dcr-ignate/ignatelitedcr:/usr/src/app/service_logs
       - ./keys:/usr/src/app/keys:ro
