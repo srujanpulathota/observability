@@ -1,53 +1,56 @@
-Deployment YAML Changes:
-Add init container (under spec.template.spec): 
-
-
-
-  initContainers:
-      - name: otel-agent
-        image: registry.gitlab.com/tmobile/apm_team/appdynamics/images/nodejs-agent:latest
-      command: ["cp", "-ra", "/otel/node_modules", "/opt/temp"]
-      volumeMounts:
-       - name: otel-agent
-      mountPath: /opt/temp 
-Add mount path to your application container:
-
-
-
-- name: otel-agent
-  mountPath: /app/opt/otel
-Add Environment Variables (in your application container spec): For full list of Required and Recommended OTEL Resource Attributes, refer here.
-
-
-
-      - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: (See the link above, Connecting to the Collectors, for what values to put here.)
-      - name: OTEL_SERVICE_NAME
-        value: <Name of your microservice, this should match SNOW's CSDM>
-      - name: OTEL_RESOURCE_ATTRIBUTES
-        value: service.namespace=<{{K8S_NS}},service.instance.id=<Pod's instance ID>,deployment.environment=<Environment>,,tmo.cmdb.apm_id=<APMID from CMDB>,tmo.cmdb.app_id=<APPID from CMDB>,tmo.cmdb.du_id=<DUID from CMDB>,tmo.app_name=<Short name for logical grouping of microservices>
-      - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: "http/protobuf"
-      - name: OTEL_TRACES_EXPORTER
-        value: "otlp"
-      - name: OTEL_METRICS_EXPORTER
-        value: "otlp"
-      - name: OTEL_LOGS_EXPORTER
-        value: "none" 
-Add otel-agent empty directory volume:
-
-
-
-      - name: otel-agent
-        emptyDir: {}
-          sizeLimit: '100Mi'
-You’ll need to update your package.json to include the OpenTelemetry agent when starting the application.
-
-Update your start script to:
-
-
-
-"start": "node --require /app/opt/otel/node_modules/@splunk/otel/instrument <your-app.js>"
-Alternatively, in your Dockerfile:
-
-CMD ["node","--require","/app/opt/otel/node_modules/@splunk/otel/instrument", "<your-app.js>"]
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/en.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/es.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/fi.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/fr.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/hi.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/hu.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/id.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/it.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/ja.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/ko.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/nb.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/nl.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/nn.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/pirate.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/pl.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/pt.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/pt_BR.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/ru.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/th.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/tr.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/uk_UA.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/uz.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/zh_CN.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/locales/zh_TW.json': File exists
+cp: can't preserve times of '/app/opt/otel/node_modules/yargs/locales': Operation not permitted
+cp: can't preserve ownership of '/app/opt/otel/node_modules/yargs/locales': Operation not permitted
+cp: can't preserve permissions of '/app/opt/otel/node_modules/yargs/locales': Operation not permitted
+cp: can't create '/app/opt/otel/node_modules/yargs/package.json': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/yargs': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs/yargs.mjs': File exists
+cp: can't preserve times of '/app/opt/otel/node_modules/yargs': Operation not permitted
+cp: can't preserve ownership of '/app/opt/otel/node_modules/yargs': Operation not permitted
+cp: can't preserve permissions of '/app/opt/otel/node_modules/yargs': Operation not permitted
+cp: can't create '/app/opt/otel/node_modules/yargs-parser/CHANGELOG.md': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs-parser/LICENSE.txt': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs-parser/README.md': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs-parser/browser.js': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs-parser/build/index.cjs': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs-parser/build/lib/index.js': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs-parser/build/lib/string-utils.js': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs-parser/build/lib/tokenize-arg-string.js': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs-parser/build/lib/yargs-parser-types.js': File exists
+cp: can't create '/app/opt/otel/node_modules/yargs-parser/build/lib/yargs-parser.js': File exists
+cp: can't preserve times of '/app/opt/otel/node_modules/yargs-parser/build/lib': Operation not permitted
+cp: can't preserve ownership of '/app/opt/otel/node_modules/yargs-parser/build/lib': Operation not permitted
+cp: can't preserve permissions of '/app/opt/otel/node_modules/yargs-parser/build/lib': Operation not permitted
+cp: can't preserve times of '/app/opt/otel/node_modules/yargs-parser/build': Operation not permitted
+cp: can't preserve ownership of '/app/opt/otel/node_modules/yargs-parser/build': Operation not permitted
+cp: can't preserve permissions of '/app/opt/otel/node_modules/yargs-parser/build': Operation not permitted
+cp: can't create '/app/opt/otel/node_modules/yargs-parser/package.json': File exists
+cp: can't preserve times of '/app/opt/otel/node_modules/yargs-parser': Operation not permitted
+cp: can't preserve ownership of '/app/opt/otel/node_modules/yargs-parser': Operation not permitted
+cp: can't preserve permissions of '/app/opt/otel/node_modules/yargs-parser': Operation not permitted
+cp: can't preserve times of '/app/opt/otel/node_modules': Operation not permitted
+cp: can't preserve ownership of '/app/opt/otel/node_modules': Operation not permitted
+cp: can't preserve permissions of '/app/opt/otel/node_modules': Operation not permitted
