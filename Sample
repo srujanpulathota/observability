@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  ignate_lite:
+    image: 471186337069.dkr.ecr.us-east-2.amazonaws.com/ignate-lite:tmo-v1.0.102-release-2025-11-13
+    container_name: ignate_lite
+    ports:
+      - "8044:8044"
+    env_file:
+      - .ignatelite.env
+    volumes:
+      - /dev-dcr-ignate/ignatelitedcr:/usr/src/app/service_logs
+      - ./keys:/usr/src/app/keys:ro
+    networks:
+      - intranet
+    restart: unless-stopped
+  worker:
+    image: 471186337069.dkr.ecr.us-east-2.amazonaws.com/ignate-lite:tmo-v1.0.102-release-2025-11-13
+    container_name: ignate_lite_worker
+    env_file:
+      - .ignatelite.env
+    volumes:
+      - /dev-dcr-ignate/ignatelitedcr:/usr/src/app/service_logs
+      - ./keys:/usr/src/app/keys:ro
+    command: npm run start-worker
+    networks:
+      - intranet
+    restart: unless-stopped
+networks:
+  intranet:
+    driver: bridge
