@@ -1,31 +1,97 @@
 version: "3.9"
 
 services:
+  # Acts like a Kubernetes initContainer for the OTEL Node.js agent
+  otel-agent-init:
+    image: registry.gitlab.com/tmobile/apm_team/appdynamics/images/nodejs-agent:latest
+    container_name: otel_agent_init
+    command: ["sh", "-c", "cp -ra /otel/node_modules /app/opt/otel && ls -R /app/opt/otel"]
+    volumes:
+      - otel-agent:/app/opt/otel
+    restart: "no"
+    networks:
+      - intranet
+
   ignate_lite:
     image: 471186337069.dkr.ecr.us-east-2.amazonaws.com/ignate-lite:tmo-v1.0.102-release-2025-11-13
     container_name: ignate_lite
+    depends_on:
+      otel-agent-init:
+        condition: service_completed_successfully
     ports:
       - "8044:8044"
     env_file:
       - .ignatelite.env
+    environment:
+      # Inject OTEL instrumentation into any Node process
+      NODE_OPTIONS: "--require /app/opt/otel/node_modules/@splunk/otel/instrument"
+
+      # ---- OTEL CONFIG: fill these with real values ----
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://<otel-collector-host>:4317"
+      OTEL_SERVICE_NAME: "ignate-lite"  # match SNOW CSDM service name
+      OTEL_RESOURCE_ATTRIBUTES: >
+        service.namespace=<K8S_NS>,
+        service.instance.id=ignate-lite-main,
+        deployment.environment=<ENV>,
+        tmo.cmdb.apm_id=<APM_ID_FROM_CMDB>,
+        tmo.cmdb.app_id=<APP_ID_FROM_CMDB>,
+        tmo.cmdb.du_id=<DU_ID_FROM_CMDB>,
+        tmo.app_name=<LOGICAL_APP_NAME>
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_METRICS_EXPORTER: "otlp"
+      OTEL_LOGS_EXPORTER: "none"
+      # --------------------------------------------------
     volumes:
       - /dev-dcr-ignate/ignatelitedcr:/usr/src/app/service_logs
       - ./keys:/usr/src/app/keys:ro
+      # OTEL agent node_modules shared from init service
+      - otel-agent:/app/opt/otel
     networks:
       - intranet
     restart: unless-stopped
+
   worker:
     image: 471186337069.dkr.ecr.us-east-2.amazonaws.com/ignate-lite:tmo-v1.0.102-release-2025-11-13
     container_name: ignate_lite_worker
+    depends_on:
+      otel-agent-init:
+        condition: service_completed_successfully
     env_file:
       - .ignatelite.env
+    environment:
+      # Same OTEL injection, but this time for the worker's Node process
+      NODE_OPTIONS: "--require /app/opt/otel/node_modules/@splunk/otel/instrument"
+
+      # ---- OTEL CONFIG: you can tweak service name if needed ----
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://<otel-collector-host>:4317"
+      OTEL_SERVICE_NAME: "ignate-lite-worker"
+      OTEL_RESOURCE_ATTRIBUTES: >
+        service.namespace=<K8S_NS>,
+        service.instance.id=ignate-lite-worker,
+        deployment.environment=<ENV>,
+        tmo.cmdb.apm_id=<APM_ID_FROM_CMDB>,
+        tmo.cmdb.app_id=<APP_ID_FROM_CMDB>,
+        tmo.cmdb.du_id=<DU_ID_FROM_CMDB>,
+        tmo.app_name=<LOGICAL_APP_NAME>
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_METRICS_EXPORTER: "otlp"
+      OTEL_LOGS_EXPORTER: "none"
+      # -----------------------------------------------------------
     volumes:
       - /dev-dcr-ignate/ignatelitedcr:/usr/src/app/service_logs
       - ./keys:/usr/src/app/keys:ro
+      - otel-agent:/app/opt/otel
     command: npm run start-worker
     networks:
       - intranet
     restart: unless-stopped
+
 networks:
   intranet:
     driver: bridge
+
+volumes:
+  otel-agent:
+    driver: local
